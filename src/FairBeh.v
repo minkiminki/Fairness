@@ -170,8 +170,8 @@ Section BEHAVES.
 
   Definition diverge_index: forall (R: Type) (idx: imap) (itr: state), Prop := paco3 _diverge_index bot3.
 
-  Hint Constructors _diverge_index.
-  Hint Unfold diverge_index.
+  Hint Constructors _diverge_index: core.
+  Hint Unfold diverge_index: core.
   Hint Resolve diverge_index_mon: paco.
   Hint Resolve cpn3_wcompat: paco.
 
@@ -277,8 +277,8 @@ Section BEHAVES.
     - econs 8; eauto.
   Qed.
 
-  Hint Constructors _of_state.
-  Hint Unfold of_state.
+  Hint Constructors _of_state: core.
+  Hint Unfold of_state: core.
   Hint Resolve of_state_mon: paco.
   Hint Resolve cpn4_wcompat: paco.
 
@@ -515,12 +515,12 @@ Section BEHAVES.
 End BEHAVES.
 
 End Beh.
-#[export] Hint Unfold Beh.improves.
-#[export] Hint Constructors Beh._diverge_index.
-#[export] Hint Unfold Beh.diverge_index.
+#[export] Hint Unfold Beh.improves: core.
+#[export] Hint Constructors Beh._diverge_index: core.
+#[export] Hint Unfold Beh.diverge_index: core.
 #[export] Hint Resolve Beh.diverge_index_mon: paco.
-#[export] Hint Constructors Beh._of_state.
-#[export] Hint Unfold Beh.of_state.
+#[export] Hint Constructors Beh._of_state: core.
+#[export] Hint Unfold Beh.of_state: core.
 #[export] Hint Resolve Beh.of_state_mon: paco.
 
 #[export] Hint Resolve cpn3_wcompat: paco.
