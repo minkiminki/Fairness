@@ -607,7 +607,14 @@ Section ExtractRaw.
 
   Local Hint Resolve wf_spin_mon: paco.
 
+  Definition top2 { T0 T1} (x0: T0) (x1: T1 x0) := True.
+  Notation "p /2\ q" :=
+    (fun x0 x1 => p x0 x1 /\ q x0 x1)
+      (at level 50, no associativity).
+
+
   Inductive _wf_tr
+            (q: forall R, (@state_tr R) -> Prop)
             (wf_tr: forall R, (@state_tr R) -> Prop)
             R
     :
@@ -615,66 +622,94 @@ Section ExtractRaw.
   | wf_tr_ret
       retv
     :
-    _wf_tr wf_tr (Ret retv, Tr.done retv)
+    _wf_tr q wf_tr (Ret retv, Tr.done retv)
   | wf_tr_obs
       fn args rv ktr tr
       (WF: wf_tr _ (ktr rv, tr))
     :
-    _wf_tr wf_tr (Vis (Observe fn args) ktr, Tr.cons (obsE_syscall fn args rv) tr)
+    _wf_tr q wf_tr (Vis (Observe fn args) ktr, Tr.cons (obsE_syscall fn args rv) tr)
   | wf_tr_spin
       itr
       (WFS: wf_spin itr)
     :
-    _wf_tr wf_tr (itr, Tr.spin)
+    _wf_tr q wf_tr (itr, Tr.spin)
   | wf_tr_tau
       itr tr
-      (STEP: _wf_tr wf_tr (itr, tr))
+      (STEP: _wf_tr q wf_tr (itr, tr))
+      (IH: q _ (itr, tr))
     :
-    _wf_tr wf_tr (Tau itr, tr)
+    _wf_tr q wf_tr (Tau itr, tr)
   | wf_tr_choose
       X ktr x tr
-      (STEP: _wf_tr wf_tr (ktr x, tr))
+      (STEP: _wf_tr q wf_tr (ktr x, tr))
+      (IH: q _ (ktr x, tr))
     :
-    _wf_tr wf_tr (Vis (Choose X) ktr, tr)
+    _wf_tr q wf_tr (Vis (Choose X) ktr, tr)
   | wf_tr_fair
       fm ktr tr
-      (STEP: _wf_tr wf_tr (ktr tt, tr))
+      (STEP: _wf_tr q wf_tr (ktr tt, tr))
+      (IH: q _ (ktr tt, tr))
     :
-    _wf_tr wf_tr (Vis (Fair fm) ktr, tr)
+    _wf_tr q wf_tr (Vis (Fair fm) ktr, tr)
   | wf_tr_ub
       ktr tr
     :
-    _wf_tr wf_tr (Vis Undefined ktr, tr)
+    _wf_tr q wf_tr (Vis Undefined ktr, tr)
   | wf_tr_nb
       itr
     :
-    _wf_tr wf_tr (itr, Tr.nb)
+    _wf_tr q wf_tr (itr, Tr.nb)
   .
 
-  Definition wf_tr: forall R, (@state_tr R) -> Prop := paco2 _wf_tr bot2.
+  Definition wf_tr: forall R, (@state_tr R) -> Prop := paco2 (_wf_tr top2) bot2.
 
   Lemma wf_tr_ind
-        (r: forall R, (@state_tr R) -> Prop) R (P: (@state_tr R) -> Prop)
-        (RET: forall retv : R, P (Ret retv, Tr.done retv))
-        (OBS: forall (fn : nat) (args : list nat) (rv : nat) (ktr : nat -> state) (tr : Tr.t),
-            r R (ktr rv, tr) -> P (Vis (Observe fn args) ktr, Tr.cons (obsE_syscall fn args rv) tr))
-        (SPIN: forall itr : state, wf_spin itr -> P (itr, Tr.spin))
-        (TAU: forall (itr : state) (tr : Tr.t) (STEP: _wf_tr r (itr, tr)) (IH: P (itr, tr)), P (Tau itr, tr))
-        (CHOOSE: forall (X : Type) (ktr : X -> state) (x : X) (tr : Tr.t) (STEP: _wf_tr r (ktr x, tr))
-                   (IH: P (ktr x, tr)), P (Vis (Choose X) ktr, tr))
-        (FAIR: forall (fm : fmap) (ktr : unit -> state) (tr : Tr.t) (STEP: _wf_tr r (ktr tt, tr))
-                 (IH: P (ktr tt, tr)), P (Vis (Fair fm) ktr, tr))
-        (UB: forall (ktr : void -> itree eventE R) (tr : Tr.t), P (Vis Undefined ktr, tr))
-        (NB: forall itr : state, P (itr, Tr.nb))
+        (q r: forall R, (@state_tr R) -> Prop) R (P: forall R, (@state_tr R) -> Prop)
+        (IND: forall sttr, @_wf_tr (q /2\ P) r R sttr -> P _ sttr)
     :
-    forall sttr, @_wf_tr r R sttr -> P sttr.
+    forall sttr, @_wf_tr q r R sttr -> P _ sttr.
   Proof.
-    fix IH 2. i. inv H; eauto.
+    cut (forall sttr, @_wf_tr q r R sttr -> P _ sttr /\ @_wf_tr (q /2\ P) r R sttr).
+    { i. eapply H; eauto. }
+    fix IH 2. i. inv H.
+    { split.
+      { eapply IND. econs 1; eauto. }
+      { econs; eauto. }
+    }
+    { split.
+      { eapply IND. econs 2; eauto. }
+      { econs; eauto. }
+    }
+    { split.
+      { eapply IND. econs 3; eauto. }
+      { econs; eauto. }
+    }
+    { hexploit IH; eauto. i. des. split.
+      { eapply IND. econs 4; eauto. }
+      { econs; eauto. }
+    }
+    { hexploit IH; eauto. i. des. split.
+      { eapply IND. econs 5; eauto. }
+      { econs; eauto. }
+    }
+    { hexploit IH; eauto. i. des. split.
+      { eapply IND. econs 6; eauto. }
+      { econs; eauto. }
+    }
+    { split.
+      { eapply IND. econs 7; eauto. }
+      { econs; eauto. }
+    }
+    { split.
+      { eapply IND. econs 8; eauto. }
+      { econs; eauto. }
+    }
   Qed.
 
-  Lemma wf_tr_mon: monotone2 _wf_tr.
+  Lemma wf_tr_mon q: monotone2 (_wf_tr q).
   Proof.
     ii. induction IN using wf_tr_ind; eauto.
+    inv IN; des.
     - econs; eauto.
     - econs; eauto.
     - econs; eauto.
@@ -684,6 +719,25 @@ Section ExtractRaw.
     - econs; eauto.
     - econs; eauto.
   Qed.
+
+  Lemma wf_tr_mon_ind q0 q1 r R str
+        (IN: @_wf_tr q0 r R str)
+        (LE: q0 <2= q1)
+    :
+    @_wf_tr q1 r R str.
+  Proof.
+    ii. induction IN using wf_tr_ind; eauto.
+    inv IN; des.
+    - econs; eauto.
+    - econs; eauto.
+    - econs; eauto.
+    - econs; eauto.
+    - econs; eauto.
+    - econs; eauto.
+    - econs; eauto.
+    - econs; eauto.
+  Qed.
+
 
   Local Hint Constructors _wf_tr.
   Local Hint Unfold wf_tr.
@@ -691,7 +745,38 @@ Section ExtractRaw.
   Local Hint Resolve cpn2_wcompat: paco.
 
   Lemma wf_tr_ind2
-        R (P: (@state_tr R) -> Prop)
+        (P: forall R, (@state_tr R) -> Prop)
+        (CIH: forall R (sttr: @state_tr R), paco2 (_wf_tr P) bot2 _ sttr -> P _ sttr)
+    :
+    forall R (sttr: @state_tr R), wf_tr sttr -> P _ sttr.
+  Proof.
+    i. punfold H. induction H using wf_tr_ind; eauto.
+    { eapply CIH. pfold. eapply wf_tr_mon.
+      { eapply wf_tr_mon_ind; eauto. i. ss. des; auto. }
+      { i. inv PR; ss. left.
+
+ auto. inv PR; ss. eapply wf_tr_mon_ind; eauto. i. ss. des; auto. }
+
+eapply _wft
+
+eapply wf_tr_ind; eauto.
+    { i. eapply CIH. eauto.
+
+
+admit. }
+    { punfold H. }
+
+eapply wf_tr_mon; eauto. i. pclearbot. eauto. }
+
+
+        - i. eapply TAU; eauto. pfold. eapply wf_tr_mon; eauto.
+        - i. eapply CHOOSE; eauto. pfold. eapply wf_tr_mon; eauto.
+        - i. eapply FAIR; eauto. pfold. eapply wf_tr_mon; eauto.
+        - punfold H. eapply wf_tr_mon; eauto. i. pclearbot. eauto.
+  Qed.
+
+  Lemma wf_tr_ind2
+        (P: forall R, (@state_tr R) -> Prop)
         (RET: forall retv : R, P (Ret retv, Tr.done retv))
         (OBS: forall (fn : nat) (args : list nat) (rv : nat) (ktr : nat -> state) (tr : Tr.t),
             wf_tr (ktr rv, tr) -> P (Vis (Observe fn args) ktr, Tr.cons (obsE_syscall fn args rv) tr))
@@ -1210,7 +1295,7 @@ Section ExtractRaw.
     :
     wf_tr (st, tr).
   Proof.
-    ginit. revert_until R. gcofix CIH. i. 
+    ginit. revert_until R. gcofix CIH. i.
     induction BEH using (@of_state_ind2).
     { gstep. econs. }
     { gstep. econs. eapply beh_diverge_index_wf_spin; eauto. }
@@ -1351,7 +1436,7 @@ Section ExtractRaw.
       hexploit sttr2raw_red_choose.
       3:{ i; des. setoid_rewrite H0; clear H0. ss. guclo extract_tr_indC_spec. econs.
           (*TODO*)
-          gfinal. right. 
+          gfinal. right.
 
 
           gfinal. right. pfold. econs.
@@ -1361,7 +1446,7 @@ Section ExtractRaw.
 
           pfold. econs; eauto. right. eapply CIH.
 
-      
+
       { pfold. econs. left. eapply WF0. }
       admit.
     }
