@@ -856,7 +856,7 @@ Section ExtractRaw.
         itr tr
         (NNB: tr <> Tr.nb)
         (WF: paco3 _wf_tr bot3 _ q (itr, tr))
-        (IH: q (itr, tr))
+        (IH: tr <> Tr.spin -> q (itr, tr))
       :
       observe_state_first q
                           (Tau itr, tr)
@@ -865,7 +865,7 @@ Section ExtractRaw.
         X ktr x tr
         (NNB: tr <> Tr.nb)
         (WF: paco3 _wf_tr bot3 _ q (ktr x, tr))
-        (IH: q (ktr x, tr))
+        (IH: tr <> Tr.spin -> q (ktr x, tr))
       :
       observe_state_first q
                           (Vis (Choose X) ktr, tr)
@@ -874,7 +874,7 @@ Section ExtractRaw.
         fm ktr tr
         (NNB: tr <> Tr.nb)
         (WF: paco3 _wf_tr bot3 _ q (ktr tt, tr))
-        (IH: q (ktr tt, tr))
+        (IH: tr <> Tr.spin -> q (ktr tt, tr))
       :
       observe_state_first q
                           (Vis (Fair fm) ktr, tr)
@@ -923,91 +923,15 @@ Section ExtractRaw.
     :
     exists rawst, observe_state_first q sttr rawst.
   Proof.
-  Admitted.
-
-  Lemma observe_state_prop_exists
-        R (q: (@state_tr R) -> Prop) (sttr: @state_tr R)
-    :
-    exists rawst, observe_state_prop q sttr rawst.
-  Proof.
-  Admitted.
-
-  Lemma observe_state_ret
-        R (q: (@state_tr R) -> Prop) (retv: R)
-    :
-    observe_state q (Ret retv, Tr.done retv) = Some (None, (Ret retv, Tr.done retv)).
-  Proof.
-    unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
-    rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
-    { esplits; eauto. }
-    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
-    i. inv H. eauto.
-  Qed.
-
-  Lemma observe_state_choose
-        R q tr X ktr
-        (WF: paco3 _wf_tr bot3 R q (Vis (Choose X) ktr, tr))
-        (NNB: tr <> Tr.nb)
-    :
-    exists (x: X),
-      (paco3 _wf_tr bot3 R q (ktr x, tr)) /\
-        (q (ktr x, tr)) /\
-        (observe_state (R:=R) q (Vis (Choose X) ktr, tr) = Some (Some (inl silentE_tau), (ktr x, tr))).
-  Proof.
-    unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
-    rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
-    { esplits; eauto. }
-    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
-    i. inv H; clarify.
-    eapply inj_pair2 in H0. clarify. eauto.
-  Qed.
-
-  Lemma observe_state_tau
-        R (q: (@state_tr R) -> Prop) itr tr
-        (WF: paco3 _wf_tr bot3 _ q (Tau itr, tr))
-        (NNB: tr <> Tr.nb)
-    :
-    observe_state (R:=R) q (Tau itr, tr) = Some (Some (inl silentE_tau), (itr, tr)) /\ q (itr, tr).
-  Proof.
-    unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
-    rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
-    { esplits; eauto. }
-    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
-    i. inv H; clarify.
-  Qed.
-
-  Lemma observe_state_choose'
-        R q tr X ktr
-        (WF: paco3 _wf_tr bot3 R q (Vis (Choose X) ktr, tr))
-        (NNB: tr <> Tr.nb)
-    :
-    exists (x: X),
-      (paco3 _wf_tr bot3 R q (ktr x, tr)) /\
-        (q (ktr x, tr)) /\
-        (observe_state (R:=R) q (Vis (Choose X) ktr, tr) = Some (Some (inl silentE_tau), (ktr x, tr))).
-  Proof.
-    unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
-    rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
-    { esplits; eauto. }
-    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
-    i. inv H; clarify.
-    eapply inj_pair2 in H0. clarify. eauto.
-  Qed.
-
-
     revert sttr WF.
-    eapply (@wf_tr_ind2 R q (fun sttr => exists rawst, observe_state_first q sttr rawst /\ q sttr)).
+    eapply (@wf_tr_ind2 R q (fun sttr => exists rawst, observe_state_first q sttr rawst)).
     i. punfold H. inv H.
     - eexists. ii. econs; eauto.
     - eexists. ii. econs.
     - punfold WFS. inv WFS.
-      + eexists. econs; eauto; ss. pclearbot. eauto. admit.
-      + pclearbot. eexists. econs; eauto; ss. admit.
-      + eexists. econs; eauto; ss. pclearbot. eauto. admit.
+      + eexists. econs; eauto; ss. pclearbot. eauto.
+      + pclearbot. eexists. econs; eauto; ss.
+      + eexists. econs; eauto; ss. pclearbot. eauto.
       + eexists. econs 8; eauto.
     - pose (classic (tr <> Tr.nb)) as NNB. des.
       + eexists. econs; eauto; ss. pfold. eapply wf_tr_mon_ind; eauto. i. ss. des; auto.
@@ -1023,166 +947,138 @@ Section ExtractRaw.
       + clarify. eexists. econs 8.
       + eexists. econs. eauto.
     - eexists. econs.
-  Admitted.
-  (* Qed. *)
+  Qed.
 
   Lemma observe_state_prop_exists
         R (q: (@state_tr R) -> Prop) (sttr: @state_tr R)
     :
-    exists rawst, observe_state_prop q sttr rawst /\ q sttr.
+    exists rawst, observe_state_prop q sttr rawst.
   Proof.
-  Admitted.
-  (*   pose (classic (paco3 _wf_tr bot3 _ q sttr)) as WF. des. *)
-  (*   { revert sttr WF. *)
-  (*     eapply (@wf_tr_ind2 R q (fun sttr => exists rawst, observe_state_prop q sttr rawst)). *)
-  (*     i. punfold H. inv H. *)
-  (*     - eexists. ii. econs. *)
-  (*     - eexists. ii. econs. *)
-  (*     - punfold WFS. inv WFS. *)
-  (*       + eexists. econs; eauto. ss. *)
-  (*       + pclearbot. eexists. econs; eauto. ss. *)
-  (*       + eexists. econs; eauto. ss. *)
-  (*       + eexists. econs 8; eauto. *)
-  (*     - pose (classic (tr <> Tr.nb)) as NNB. des. *)
-  (*       + eexists. econs; eauto. *)
-  (*       + apply Classical_Prop.NNPP in NNB. clarify. eexists. econs 7. *)
-  (*     - pose (classic (tr <> Tr.nb)) as NNB. des. *)
-  (*       + eexists. econs; eauto. pfold. *)
-  (*         eapply wf_tr_mon_ind; eauto. i. ss. *)
-  (*       + apply Classical_Prop.NNPP in NNB. clarify. eexists. econs 7. *)
-  (*     - pose (classic (tr <> Tr.nb)) as NNB. des. *)
-  (*       + eexists. econs; eauto. *)
-  (*       + apply Classical_Prop.NNPP in NNB. clarify. eexists. econs 7. *)
-  (*     - destruct (classic (tr = Tr.spin)) as [SPIN | NSPIN]. *)
-  (*       + clarify. eexists. econs 8. *)
-  (*       + eexists. econs. eauto. *)
-  (*     - eexists. econs. *)
-  (*   } *)
-  (*   { eexists. ii. clarify. } *)
-  (*   Unshelve. exact None. *)
-  (* Qed. *)
+    pose (classic (paco3 _wf_tr bot3 _ q sttr)) as WF. des.
+    { revert sttr WF.
+      eapply (@wf_tr_ind2 R q (fun sttr => exists rawst, observe_state_prop q sttr rawst)).
+      i. punfold H. inv H.
+      - eexists. ii. econs; eauto.
+      - eexists. ii. econs.
+      - punfold WFS. inv WFS.
+        + eexists. econs; eauto; ss. pclearbot. eauto.
+        + pclearbot. eexists. econs; eauto; ss.
+        + eexists. econs; eauto; ss. pclearbot. eauto.
+        + eexists. econs 8; eauto.
+      - pose (classic (tr <> Tr.nb)) as NNB. des.
+        + eexists. econs; eauto; ss. pfold. eapply wf_tr_mon_ind; eauto. i. ss. des; auto.
+        + apply Classical_Prop.NNPP in NNB. clarify. eexists. econs 7.
+      - pose (classic (tr <> Tr.nb)) as NNB. des.
+        + eexists. econs; eauto. pfold.
+          eapply wf_tr_mon_ind; eauto; ss. i. des; ss.
+        + apply Classical_Prop.NNPP in NNB. clarify. eexists. econs 7.
+      - pose (classic (tr <> Tr.nb)) as NNB. des.
+        + eexists. econs; eauto; ss. pfold. eapply wf_tr_mon_ind; eauto. i. ss. des; auto.
+        + apply Classical_Prop.NNPP in NNB. clarify. eexists. econs 7.
+      - destruct (classic (tr = Tr.spin)) as [SPIN | NSPIN].
+        + clarify. eexists. econs 8.
+        + eexists. econs. eauto.
+      - eexists. econs.
+    }
+    { eexists. ii. clarify. }
+    Unshelve. exact None.
+  Qed.
 
   (** observe_state reduction lemmas **)
   Lemma observe_state_ret
-        R (q: (@state_tr R) -> Prop) (retv: R)
-    :
-    observe_state q (Ret retv, Tr.done retv) = Some (None, (Ret retv, Tr.done retv)).
-  Proof.
-    unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
-    rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
-    { esplits; eauto. }
-    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
-    i. inv H. eauto.
-  Qed.
-
-  Lemma observe_state_choose'
-        R q tr X ktr
-        (WF: paco3 _wf_tr bot3 R q (Vis (Choose X) ktr, tr))
+        R (q: (@state_tr R) -> Prop) retv tr
+        (WF: paco3 _wf_tr bot3 _ q (Ret retv, tr))
         (NNB: tr <> Tr.nb)
     :
-    exists (x: X),
-      (paco3 _wf_tr bot3 R q (ktr x, tr)) /\
-        (q (ktr x, tr)) /\
-        (observe_state (R:=R) q (Vis (Choose X) ktr, tr) = Some (Some (inl silentE_tau), (ktr x, tr))).
+    (tr = Tr.done retv)
+    /\ observe_state q (Ret retv, tr) = Some (None, (Ret retv, Tr.done retv)).
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
     hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
     { esplits; eauto. }
     i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
-    i. inv H; clarify.
-    eapply inj_pair2 in H0. clarify. eauto.
+    i. inv H; eauto. ss.
   Qed.
 
-
   Lemma observe_state_obs
-        R (q: (@state_tr R) -> Prop) fn args rv tl ktr
-        (WF: paco3 _wf_tr bot3 _ top1 (ktr rv, tl))
+        R (q: (@state_tr R) -> Prop) fn args tr ktr
+        (WF: paco3 _wf_tr bot3 _ q (Vis (Observe fn args) ktr, tr))
+        (NNB: tr <> Tr.nb)
     :
-    observe_state (R:=R) q (Vis (Observe fn args) ktr, Tr.cons (obsE_syscall fn args rv) tl) =
-      Some (Some (inr (obsE_syscall fn args rv)), (ktr rv, tl)).
+    exists rv tl,
+      (tr = Tr.cons (obsE_syscall fn args rv) tl)
+      /\ (paco3 _wf_tr bot3 R top1 (ktr rv, tl))
+      /\ observe_state (R:=R) q (Vis (Observe fn args) ktr, tr) =
+           Some (Some (inr (obsE_syscall fn args rv)), (ktr rv, tl)).
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
     hexploit (observe_state_prop_exists). intros OSP. eapply o in OSP; clear o.
     unfold observe_state_prop in OSP. hexploit OSP; clear OSP; eauto.
-    { red. pfold. econs. eauto. }
-    i. inv H. eapply inj_pair2 in H3. clarify.
+    i. inv H; ss. punfold WF. inv WF; ss. pclearbot.
+    eapply inj_pair2 in H3. eapply inj_pair2 in H2. clarify. esplits; eauto.
   Qed.
 
   Lemma observe_state_tau
         R (q: (@state_tr R) -> Prop) itr tr
-        (WF: paco3 _wf_tr bot3 _ q (itr, tr))
+        (WF: paco3 _wf_tr bot3 _ q (Tau itr, tr))
         (NNB: tr <> Tr.nb)
     :
-    observe_state (R:=R) q (Tau itr, tr) = Some (Some (inl silentE_tau), (itr, tr)) /\ q (itr, tr).
+    (paco3 _wf_tr bot3 R q (itr, tr))
+    /\ (tr <> Tr.spin -> q (itr, tr))
+    /\ observe_state (R:=R) q (Tau itr, tr) = Some (Some (inl silentE_tau), (itr, tr)).
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. eapply o in OSP; clear o.
-    unfold observe_state_prop in OSP. hexploit OSP; clear OSP; eauto.
-    { punfold WF. rr. pfold. econs; eauto. ss. }
-    i. inv H; eauto. clarify.
+    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
+    { esplits; eauto. }
+    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
+    i. inv H; clarify.
   Qed.
 
   Lemma observe_state_choose
-        R tr X ktr
-        (WF: wf_tr (Vis (Choose X) ktr, tr))
-        (NNB: tr <> Tr.nb)
-    :
-    exists (x: X),
-      (wf_tr (ktr x, tr)) /\
-        (observe_state (R:=R) (Vis (Choose X) ktr, tr) = Some (Some (inl silentE_tau), (ktr x, tr))).
-  Proof.
-    unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
-    rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. eapply o in OSP; clear o.
-    unfold observe_state_prop in OSP. hexploit OSP; clear OSP; eauto.
-    i. inv H; clarify.
-    eapply inj_pair2 in H0. clarify. eauto.
-  Qed.
-
-  Lemma observe_state_choose'
         R q tr X ktr
         (WF: paco3 _wf_tr bot3 R q (Vis (Choose X) ktr, tr))
         (NNB: tr <> Tr.nb)
     :
     exists (x: X),
-      (paco3 _wf_tr bot3 R q (ktr x, tr)) /\
-        (q (ktr x, tr)) /\
-        (observe_state (R:=R) (Vis (Choose X) ktr, tr) = Some (Some (inl silentE_tau), (ktr x, tr))).
+      (paco3 _wf_tr bot3 R q (ktr x, tr))
+      /\ (tr <> Tr.spin -> q (ktr x, tr))
+      /\ (observe_state (R:=R) q (Vis (Choose X) ktr, tr) = Some (Some (inl silentE_tau), (ktr x, tr))).
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. eapply o in OSP; clear o.
-    unfold observe_state_prop in OSP. hexploit OSP; clear OSP; eauto.
-    { rr.
+    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
+    { esplits; eauto. }
+    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
     i. inv H; clarify.
-    eapply inj_pair2 in H0. clarify. eauto.
+    eapply inj_pair2 in H0. clarify. esplits; eauto.
   Qed.
 
   Lemma observe_state_fair
-        R tr fm ktr
-        (WF: wf_tr (ktr tt, tr))
+        R (q: (@state_tr R) -> Prop) tr fm ktr
+        (WF: paco3 _wf_tr bot3 R q (Vis (Fair fm) ktr, tr))
         (NNB: tr <> Tr.nb)
     :
-    observe_state (R:=R) (Vis (Fair fm) ktr, tr) =
-                Some (Some (inl (silentE_fair fm)), (ktr tt, tr)).
+    (paco3 _wf_tr bot3 R q (ktr tt, tr))
+    /\ (tr <> Tr.spin -> q (ktr tt, tr))
+    /\ observe_state (R:=R) q (Vis (Fair fm) ktr, tr) = Some (Some (inl (silentE_fair fm)), (ktr tt, tr)).
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
-    hexploit (observe_state_prop_exists). intros OSP. eapply o in OSP; clear o.
-    unfold observe_state_prop in OSP. hexploit OSP; clear OSP; eauto.
-    { punfold WF. }
-    i. inv H. eapply inj_pair2 in H2. clarify. clarify.
+    hexploit (observe_state_prop_exists). intros OSP. des. hexploit o.
+    { esplits; eauto. }
+    i. unfold observe_state_prop in H. hexploit H; clear H; eauto.
+    i. inv H; ss.
+    eapply inj_pair2 in H2. clarify.
   Qed.
 
   Lemma observe_state_ub
-        R tr ktr
+        R (q: (@state_tr R) -> Prop) tr ktr
         (NOSPIN: tr <> Tr.spin)
     :
-    observe_state (R:=R) (Vis Undefined ktr, tr) = None.
+    observe_state (R:=R) q (Vis Undefined ktr, tr) = None.
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
@@ -1192,10 +1088,10 @@ Section ExtractRaw.
   Qed.
 
   Lemma observe_state_ub_spin
-        R tr ktr
+        R (q: (@state_tr R) -> Prop) tr ktr
         (SPIN: tr = Tr.spin)
     :
-    observe_state (R:=R) (Vis Undefined ktr, tr) = Some (None, (Vis Undefined ktr, Tr.spin)).
+    observe_state (R:=R) q (Vis Undefined ktr, tr) = Some (None, (Vis Undefined ktr, Tr.spin)).
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
@@ -1205,9 +1101,9 @@ Section ExtractRaw.
   Qed.
 
   Lemma observe_state_nb
-        R itr
+        R (q: (@state_tr R) -> Prop) itr
     :
-    observe_state (R:=R) (itr, Tr.nb) = None.
+    observe_state (R:=R) q (itr, Tr.nb) = None.
   Proof.
     unfold observe_state, epsilon. unfold Epsilon.epsilon. unfold proj1_sig. des_ifs.
     rename x into rawsttr. clear Heq.
@@ -1217,53 +1113,46 @@ Section ExtractRaw.
   Qed.
 
   Lemma observe_state_spin
-        R itr
+        R (q: (@state_tr R) -> Prop) itr
         (WFS: @wf_spin R itr)
     :
-    observe_state_first (itr, Tr.spin) (observe_state (itr, Tr.spin)).
+    observe_state_first q (itr, Tr.spin) (observe_state q (itr, Tr.spin)).
   Proof.
     punfold WFS. inv WFS.
-    - pclearbot. rewrite observe_state_tau; ss; eauto. econs; ss.
+    - pclearbot. hexploit observe_state_tau; ss; eauto.
+      { pfold. eapply wf_tr_spin. pfold. econs. left. eauto. }
+      { ss. }
+      i. des. rewrite H1. econs; ss; eauto.
     - pclearbot. hexploit observe_state_choose; eauto.
-      3:{ i. des. setoid_rewrite H0; clear H0. econs; eauto. ss. }
+      3:{ i. des. setoid_rewrite H1; clear H1. econs; eauto. ss. }
       2: ss. pfold. econs. pfold. econs. eauto.
-    - pclearbot. rewrite observe_state_fair; ss; eauto. econs; ss.
+    - pclearbot. hexploit observe_state_fair; ss; eauto.
+      { pfold. eapply wf_tr_spin. pfold. econs. left. eauto. }
+      { ss. }
+      i. des. rewrite H1. econs; ss; eauto.
     - rewrite observe_state_ub_spin; eauto. econs.
   Qed.
 
   Theorem observe_state_spec
-          R (sttr: @state_tr R)
+          R (q: (@state_tr R) -> Prop) (sttr: @state_tr R)
     :
-    observe_state_prop sttr (observe_state sttr).
+    observe_state_prop q sttr (observe_state q sttr).
   Proof.
     destruct sttr as [st tr]. ii. rename H into WF.
+    pose (classic (tr = Tr.nb)) as NB. des.
+    { clarify. rewrite observe_state_nb. econs. }
     ides st.
-    - punfold WF. inv WF.
-      + rewrite observe_state_ret. econs.
-      + punfold WFS. inv WFS.
-      + rewrite observe_state_nb. econs.
-    - pose (classic (tr = Tr.nb)) as NB. des.
-      + clarify. rewrite observe_state_nb. econs.
-      + rewrite observe_state_tau; eauto. econs; eauto.
-        punfold WF. inv WF; ss.
-        * pfold. econs. punfold WFS. inv WFS. pclearbot. eauto.
-        * pfold. eapply wf_tr_mon; eauto.
+    - hexploit observe_state_ret; eauto. i. des. clarify.
+      setoid_rewrite H0. econs; eauto.
+    - hexploit observe_state_tau; eauto. i. des. setoid_rewrite H1.
+      econs; eauto.
     - destruct e.
-      + pose (classic (tr = Tr.nb)) as NB. des.
-        * clarify. rewrite observe_state_nb. econs.
-        * hexploit observe_state_choose; eauto. i. des.
-          setoid_rewrite H0; clear H0. econs; eauto.
-      + pose (classic (tr = Tr.nb)) as NB. des.
-        * clarify. rewrite observe_state_nb. econs.
-        * rewrite observe_state_fair; eauto. econs; eauto.
-          punfold WF. inv WF; ss.
-          { pfold. econs. punfold WFS. inv WFS. pclearbot. eapply inj_pair2 in H1. clarify. }
-          { eapply inj_pair2 in H1. clarify. pfold. eauto. }
-      + pose (classic (tr = Tr.nb)) as NB. des.
-        * clarify. rewrite observe_state_nb. econs.
-        * punfold WF. inv WF; clarify.
-          { eapply inj_pair2 in H0. clarify. rewrite observe_state_obs. econs. pclearbot. eauto. }
-          { punfold WFS. inv WFS. }
+      + hexploit observe_state_choose; eauto. i. des.
+        setoid_rewrite H1; clear H1. econs; eauto.
+      + hexploit observe_state_fair; eauto. i. des. setoid_rewrite H1.
+        econs; eauto.
+      + hexploit observe_state_obs; eauto. i. des. clarify.
+        setoid_rewrite H1. econs; eauto.
       + destruct (classic (tr = Tr.spin)) as [SPIN | NSPIN].
         * clarify. rewrite observe_state_ub_spin; eauto. econs.
         * rewrite observe_state_ub; eauto. econs. eauto.
@@ -1274,11 +1163,11 @@ Section ExtractRaw.
   CoFixpoint raw_spin_trace {R}: RawTr.t :=
     @RawTr.cons _ R (inl silentE_tau) raw_spin_trace.
 
-  CoFixpoint sttr2raw {R} (sttr: @state_tr R): (@RawTr.t _ R) :=
-    match observe_state sttr with
+  CoFixpoint sttr2raw {R} (q: (@state_tr R) -> Prop) (sttr: @state_tr R): (@RawTr.t _ R) :=
+    match observe_state q sttr with
     | None => RawTr.nb
     | Some (None, (Ret retv, _)) => RawTr.done retv
-    | Some (Some ev, sttr0) => RawTr.cons ev (sttr2raw sttr0)
+    | Some (Some ev, sttr0) => RawTr.cons ev (sttr2raw q sttr0)
     | Some (None, (_, Tr.spin)) => raw_spin_trace
     (* impossible case *)
     | _ => RawTr.ub
@@ -1286,72 +1175,87 @@ Section ExtractRaw.
 
   (** reduction lemmas **)
   Lemma sttr2raw_red_ret
-        R (retv: R)
+        R (q: (@state_tr R) -> Prop) (retv: R) tr
+        (WF: paco3 _wf_tr bot3 _ q (Ret retv, tr))
+        (NNB: tr <> Tr.nb)
     :
-    sttr2raw (Ret retv, Tr.done retv) = RawTr.done retv.
+    (tr = Tr.done retv)
+    /\ (sttr2raw q (Ret retv, tr) = RawTr.done retv).
   Proof.
+    hexploit observe_state_ret; eauto. i. des; subst. esplits; eauto.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
-    ss. rewrite observe_state_ret. ss.
+    ss. rewrite H0. auto.
   Qed.
 
   Lemma sttr2raw_red_obs
-        R fn args rv tl ktr
-        (WF: wf_tr (ktr rv, tl))
+        R (q: (@state_tr R) -> Prop) fn args tr ktr
+        (WF: paco3 _wf_tr bot3 _ q (Vis (Observe fn args) ktr, tr))
+        (NNB: tr <> Tr.nb)
     :
-    sttr2raw (R:=R) (Vis (Observe fn args) ktr, Tr.cons (obsE_syscall fn args rv) tl) =
-      RawTr.cons (inr (obsE_syscall fn args rv)) (sttr2raw (ktr rv, tl)).
+    exists rv tl,
+      (tr = Tr.cons (obsE_syscall fn args rv) tl)
+      /\ (paco3 _wf_tr bot3 R top1 (ktr rv, tl))
+      /\ (sttr2raw (R:=R) q (Vis (Observe fn args) ktr, tr) =
+            RawTr.cons (inr (obsE_syscall fn args rv)) (sttr2raw q (ktr rv, tl))).
   Proof.
+    hexploit observe_state_obs; eauto. i. des; subst. esplits; eauto.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
-    ss. rewrite observe_state_obs; eauto.
+    ss. rewrite H1. auto.
   Qed.
 
   Lemma sttr2raw_red_tau
-        R itr tr
-        (WF: wf_tr (itr, tr))
+        R (q: (@state_tr R) -> Prop) itr tr
+        (WF: paco3 _wf_tr bot3 _ q (Tau itr, tr))
         (NNB: tr <> Tr.nb)
     :
-    sttr2raw (R:=R) (Tau itr, tr) = RawTr.cons (inl silentE_tau) (sttr2raw (itr, tr)).
+    (paco3 _wf_tr bot3 R q (itr, tr))
+    /\ (tr <> Tr.spin -> q (itr, tr))
+    /\ sttr2raw (R:=R) q (Tau itr, tr) = RawTr.cons (inl silentE_tau) (sttr2raw q (itr, tr)).
   Proof.
+    hexploit observe_state_tau; eauto. i. des; subst. esplits; eauto.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
-    ss. rewrite observe_state_tau; eauto.
+    ss. rewrite H1. auto.
   Qed.
 
   Lemma sttr2raw_red_choose
-        R tr X ktr
-        (WF: wf_tr (Vis (Choose X) ktr, tr))
+        R (q: (@state_tr R) -> Prop) tr X ktr
+        (WF: paco3 _wf_tr bot3 _ q (Vis (Choose X) ktr, tr))
         (NNB: tr <> Tr.nb)
     :
     exists x,
-      (wf_tr (ktr x, tr)) /\
-        (sttr2raw (R:=R) (Vis (Choose X) ktr, tr) = RawTr.cons (inl silentE_tau) (sttr2raw (ktr x, tr))).
+      (paco3 _wf_tr bot3 R q (ktr x, tr))
+      /\ (tr <> Tr.spin -> q (ktr x, tr))
+      /\ (sttr2raw (R:=R) q (Vis (Choose X) ktr, tr) = RawTr.cons (inl silentE_tau) (sttr2raw q (ktr x, tr))).
   Proof.
-    hexploit observe_state_choose; eauto. i. des. exists x. split; eauto.
+    hexploit observe_state_choose; eauto. i. des; subst. esplits; eauto.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
-    ss. rewrite H0; eauto.
+    ss. rewrite H1. auto.
   Qed.
 
   Lemma sttr2raw_red_fair
-        R tr fm ktr
-        (WF: wf_tr (ktr tt, tr))
+        R (q: (@state_tr R) -> Prop) tr fm ktr
+        (WF: paco3 _wf_tr bot3 R q (Vis (Fair fm) ktr, tr))
         (NNB: tr <> Tr.nb)
     :
-    sttr2raw (R:=R) (Vis (Fair fm) ktr, tr) =
-      RawTr.cons (inl (silentE_fair fm)) (sttr2raw (ktr tt, tr)).
+    (paco3 _wf_tr bot3 R q (ktr tt, tr))
+    /\ (tr <> Tr.spin -> q (ktr tt, tr))
+    /\ (sttr2raw (R:=R) q (Vis (Fair fm) ktr, tr) = RawTr.cons (inl (silentE_fair fm)) (sttr2raw q (ktr tt, tr))).
   Proof.
+    hexploit observe_state_fair; eauto. i. des; subst. esplits; eauto.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
-    ss. rewrite observe_state_fair; eauto.
+    ss. rewrite H1. auto.
   Qed.
 
   Lemma sttr2raw_red_ub
-        R tr ktr
+        R (q: (@state_tr R) -> Prop) tr ktr
         (NSPIN: tr <> Tr.spin)
     :
-    sttr2raw (R:=R) (Vis Undefined ktr, tr) = RawTr.nb.
+    sttr2raw (R:=R) q (Vis Undefined ktr, tr) = RawTr.nb.
   Proof.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
@@ -1359,10 +1263,10 @@ Section ExtractRaw.
   Qed.
 
   Lemma sttr2raw_red_ub_spin
-        R tr ktr
+        R (q: (@state_tr R) -> Prop) tr ktr
         (SPIN: tr = Tr.spin)
     :
-    sttr2raw (R:=R) (Vis Undefined ktr, tr) = raw_spin_trace.
+    sttr2raw (R:=R) q (Vis Undefined ktr, tr) = raw_spin_trace.
   Proof.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
@@ -1373,9 +1277,9 @@ Section ExtractRaw.
   Qed.
 
   Lemma sttr2raw_red_nb
-        R itr
+        R (q: (@state_tr R) -> Prop) itr
     :
-    sttr2raw (R:=R) (itr, Tr.nb) = RawTr.nb.
+    sttr2raw (R:=R) q (itr, Tr.nb) = RawTr.nb.
   Proof.
     match goal with | |- ?lhs = _ => replace lhs with (RawTr.ob lhs) end.
     2:{ symmetry. apply RawTr.ob_eq. }
@@ -1410,10 +1314,10 @@ Section ExtractRaw.
     { gstep. econs. }
     { gstep. econs. eapply beh_diverge_index_wf_spin; eauto. }
     { gstep. econs. }
-    { gfinal. right. pfold. econs. eauto. }
-    { guclo wf_tr_indC_spec. econs. eauto. }
-    { guclo wf_tr_indC_spec. econs. eauto. }
-    { guclo wf_tr_indC_spec. econs. eauto. }
+    { gfinal. right. pfold. econs; eauto; ss. }
+    { guclo wf_tr_indC_spec. econs; eauto; ss. }
+    { guclo wf_tr_indC_spec. econs; eauto; ss. }
+    { guclo wf_tr_indC_spec. econs; eauto; ss. }
     { gfinal. right. pfold. econs. }
   Qed.
 
@@ -1424,53 +1328,59 @@ Section ExtractRaw.
     wf_spin itr.
   Proof.
     remember (itr, Tr.spin) as sttr. depgen Heqsttr. depgen itr.
-    induction WF using wf_tr_ind2; i; clarify; ss.
-    - pfold. econs. left. eapply IHWF. eauto.
-    - pfold. econs. left. eapply IHWF. eauto.
-    - pfold. econs. left. eapply IHWF. eauto.
+    induction WF using wf_tr_ind3; i; clarify; ss.
+    punfold H. inv H; auto.
+    - pfold. econs. left. eapply IH. eauto.
+    - pfold. econs. left. eapply IH. eauto.
+    - pfold. econs. left. eapply IH. eauto.
     - pfold. econs.
   Qed.
 
   Lemma sttr2raw_raw_beh_spin
-        R st
-        (WFS: wf_spin st)
+        R (q: (@state_tr R) -> Prop) st
+        (WF: paco3 _wf_tr bot3 _ q (st, Tr.spin))
     :
-    RawBeh.of_state (R:=R) st (sttr2raw (st, Tr.spin)).
+    RawBeh.of_state (R:=R) st (sttr2raw q (st, Tr.spin)).
   Proof.
-    revert_until R. pcofix CIH. i. punfold WFS. inv WFS.
-    - pclearbot. rewrite sttr2raw_red_tau; eauto; ss. pfold. econs. right. eauto.
-    - pclearbot. hexploit sttr2raw_red_choose; eauto; ss.
-      3:{ i. des. setoid_rewrite H0; clear H0. pfold. econs. right. eapply CIH. eapply wf_tr_spin_wf_spin; eauto. }
-      2: ss. pfold. econs. pfold. econs. eauto.
-    - pclearbot. rewrite sttr2raw_red_fair; eauto; ss. pfold. econs. right. eauto.
-    - pfold. econs.
+    revert_until R. pcofix CIH. i. ides st.
+    - hexploit sttr2raw_red_ret; eauto; ss. i. des. ss.
+    - hexploit sttr2raw_red_tau; eauto; ss. i. des.
+      setoid_rewrite H1. pfold. econs. right. eauto.
+    - destruct e.
+      + hexploit sttr2raw_red_choose; eauto; ss. i. des.
+        setoid_rewrite H1. pfold. econs. right. eauto.
+      + hexploit sttr2raw_red_fair; eauto; ss. i. des.
+        setoid_rewrite H1. pfold. econs. right. eauto.
+      + hexploit sttr2raw_red_obs; eauto; ss. i. des. ss.
+      + eauto.
   Qed.
 
   Theorem sttr2raw_raw_beh
-          R st tr
+          R (q: (@state_tr R) -> Prop) st tr
           (WF: wf_tr (st, tr))
     :
-    RawBeh.of_state (R:=R) st (sttr2raw (st, tr)).
+    RawBeh.of_state (R:=R) st (sttr2raw q (st, tr)).
   Proof.
-    revert_until R. pcofix CIH. i. remember (st, tr) as sttr. depgen st. depgen tr.
-    induction WF using (@wf_tr_ind2); i; clarify.
-    { rewrite sttr2raw_red_ret. pfold. econs. }
-    { rewrite sttr2raw_red_obs; eauto. pfold. econs; eauto. }
-    { hexploit sttr2raw_raw_beh_spin; eauto. i. eapply paco3_mon; eauto. ss. }
-    { pose (classic (tr0 = Tr.nb)) as NB. des; clarify.
-      { rewrite sttr2raw_red_nb. pfold. econs. }
-      rewrite sttr2raw_red_tau; eauto. pfold. econs; eauto. }
-    { pose (classic (tr0 = Tr.nb)) as NB. des; clarify.
-      { rewrite sttr2raw_red_nb. pfold. econs. }
-      hexploit sttr2raw_red_choose; eauto.
-      2:{ i; des. setoid_rewrite H0; clear H0. pfold. econs; eauto. }
-      pfold. econs. punfold WF. }
-    { pose (classic (tr0 = Tr.nb)) as NB. des; clarify.
-      { rewrite sttr2raw_red_nb. pfold. econs. }
-      rewrite sttr2raw_red_fair; eauto. pfold. econs; eauto. }
-    { pfold. econs. }
-    { pfold. rewrite sttr2raw_red_nb. econs. }
-  Qed.
+  Admitted.
+  (*   revert_until R. pcofix CIH. i. remember (st, tr) as sttr. depgen st. depgen tr. *)
+  (*   induction WF using (@wf_tr_ind3); i; clarify. punfold H. inv H. *)
+  (*   { hexploit sttr2raw_red_ret; eauto. pfold. econs. } *)
+  (*   { rewrite sttr2raw_red_obs; eauto. pfold. econs; eauto. } *)
+  (*   { hexploit sttr2raw_raw_beh_spin; eauto. i. eapply paco3_mon; eauto. ss. } *)
+  (*   { pose (classic (tr0 = Tr.nb)) as NB. des; clarify. *)
+  (*     { rewrite sttr2raw_red_nb. pfold. econs. } *)
+  (*     rewrite sttr2raw_red_tau; eauto. pfold. econs; eauto. } *)
+  (*   { pose (classic (tr0 = Tr.nb)) as NB. des; clarify. *)
+  (*     { rewrite sttr2raw_red_nb. pfold. econs. } *)
+  (*     hexploit sttr2raw_red_choose; eauto. *)
+  (*     2:{ i; des. setoid_rewrite H0; clear H0. pfold. econs; eauto. } *)
+  (*     pfold. econs. punfold WF. } *)
+  (*   { pose (classic (tr0 = Tr.nb)) as NB. des; clarify. *)
+  (*     { rewrite sttr2raw_red_nb. pfold. econs. } *)
+  (*     rewrite sttr2raw_red_fair; eauto. pfold. econs; eauto. } *)
+  (*   { pfold. econs. } *)
+  (*   { pfold. rewrite sttr2raw_red_nb. econs. } *)
+  (* Qed. *)
 
 
 
@@ -1491,20 +1401,25 @@ Section ExtractRaw.
   Qed.
 
   Lemma sttr2raw_raw_spin
-        R itr
+        R (q: (@state_tr R) -> Prop) itr
         (WFS: @wf_spin R itr)
     :
-    raw_spin (sttr2raw (itr, Tr.spin)).
+    raw_spin (sttr2raw q (itr, Tr.spin)).
   Proof.
-    revert_until R. pcofix CIH; i. punfold WFS. inv WFS.
-    - pclearbot. rewrite sttr2raw_red_tau; ss; eauto. pfold. econs. eauto.
-    - pclearbot. hexploit sttr2raw_red_choose.
-      3:{ i. des. setoid_rewrite H0; clear H0. pfold. econs. right. eapply CIH. eapply wf_tr_spin_wf_spin; eauto. }
-      2: ss. pfold. econs. pfold. econs. eauto.
-    - pclearbot. rewrite sttr2raw_red_fair; ss; eauto. pfold. econs. eauto.
-    - rewrite sttr2raw_red_ub_spin; ss; eauto. pose raw_spin_trace_spec.
-      eapply paco2_mon. eapply r0. ss.
-  Qed.
+  Admitted.
+ (*    revert_until R. pcofix CIH; i. ides itr. *)
+ (*    { *)
+
+
+ (* punfold WFS. inv WFS. *)
+ (*    - pclearbot. rewrite sttr2raw_red_tau; ss; eauto. pfold. econs. eauto. *)
+ (*    - pclearbot. hexploit sttr2raw_red_choose. *)
+ (*      3:{ i. des. setoid_rewrite H0; clear H0. pfold. econs. right. eapply CIH. eapply wf_tr_spin_wf_spin; eauto. } *)
+ (*      2: ss. pfold. econs. pfold. econs. eauto. *)
+ (*    - pclearbot. rewrite sttr2raw_red_fair; ss; eauto. pfold. econs. eauto. *)
+ (*    - rewrite sttr2raw_red_ub_spin; ss; eauto. pose raw_spin_trace_spec. *)
+ (*      eapply paco2_mon. eapply r0. ss. *)
+ (*  Qed. *)
 
   Lemma sttr2raw_extract_spin
         R st
