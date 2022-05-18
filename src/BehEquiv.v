@@ -901,17 +901,34 @@ Section ExtractRaw.
   .
 
 
+  (* Lemma wf_tr_ind_least_exists R r sttr *)
+  (*   : *)
+  (*   exists q_least, *)
+  (*     (forall q, paco3 _wf_tr r R q sttr -> paco3 _wf_tr r R q_least sttr /\ q_least <1= q). *)
+  (* Proof. *)
+  (*   exists (fun sttr0 => forall q, paco3 _wf_tr r R q sttr -> q sttr0). *)
+  (*   i. split. *)
+  (*   { revert q H. pcofix CIH. i. punfold H0. pfold. *)
+  (*     eapply wf_tr_mon. *)
+  (*     { eapply wf_tr_mon_ind; eauto. i. admit. } *)
+  (*     { i. admit. } *)
+  (*   } *)
+  (*   { i. eapply PR; eauto. } *)
+  (* Qed. *)
+
   Definition observe_state_prop
-             R (q: (@state_tr R) -> Prop) (sttr: @state_tr R)
+             R (q: @state_tr R -> Prop) (sttr: @state_tr R)
              (rawst: option (prod (option rawE) state_tr)): Prop :=
     (<<WF: paco3 _wf_tr bot3 R q sttr>>) -> (observe_state_first q sttr rawst).
+    (* forall (q: (@state_tr R) -> Prop), *)
+    (*   (<<WF: paco3 _wf_tr bot3 R q sttr>>) -> (observe_state_first q sttr rawst). *)
 
   Lemma inhabited_observe_state R: inhabited (option (prod (option rawE) (@state_tr R))).
   Proof.
     econs. exact None.
   Qed.
 
-  Definition observe_state {R} (q: (@state_tr R) -> Prop) (sttr: @state_tr R):
+  Definition observe_state {R}  (q: @state_tr R -> Prop) (sttr: @state_tr R):
     option (prod (option rawE) state_tr) :=
     epsilon _ (@inhabited_observe_state R) (observe_state_prop q sttr).
 
@@ -950,7 +967,7 @@ Section ExtractRaw.
   Qed.
 
   Lemma observe_state_prop_exists
-        R (q: (@state_tr R) -> Prop) (sttr: @state_tr R)
+        R (q: @state_tr R -> Prop) (sttr: @state_tr R)
     :
     exists rawst, observe_state_prop q sttr rawst.
   Proof.
