@@ -215,7 +215,7 @@ Section LADEQ.
       apply nm_empty_eq in Heqtl_src, Heqtl_tgt. clarify.
       esplits; ss; eauto.
       - unfold NatSet.empty in *. rewrite !key_set_empty_empty_eq. eauto.
-      - instantiate (1:=@NatMap.empty _). unfold resources_wf. r_wf INV0. rewrite sum_of_resources_empty. r_solve.
+      - instantiate (1:=@NatMap.empty _). unfold resources_wf. r_wf INV0.
       - econs.
     }
 

@@ -1,4 +1,4 @@
-From sflib Require Import sflib.
+From Fairness Require Import CoqLib.
 From Paco Require Import paco.
 
 Require Export Coq.Strings.String.
@@ -235,11 +235,11 @@ Section PROOF.
       des.
       + subst. gfold. eapply sim_progress; auto. right. eapply CIH.
         eapply find_none_aux; eauto. eapply find_none_aux; eauto.
-        { hexploit nm_wf_pair_pop_cases; eauto. instantiate (1:=tid0). i; des; clarify. }
+        { exploit nm_wf_pair_pop_cases; eauto. instantiate (1:=tid0). i; des; clarify. }
         punfold H.
       + eapply IHo. eauto.
         eapply find_none_aux; eauto. eapply find_none_aux; eauto.
-        { hexploit nm_wf_pair_pop_cases; eauto. instantiate (1:=tid0). i; des; clarify. }
+        { exploit nm_wf_pair_pop_cases; eauto. instantiate (1:=tid0). i; des; clarify. }
         eapply ksim_reset_prog. punfold H. all: ss.
 
     - hexploit KSIM3; clear KSIM2 KSIM3; ss.
@@ -286,7 +286,7 @@ Section PROOF.
       }
       gfold. eapply sim_progress. right. eapply CIH.
       eapply find_none_aux; eauto. eapply find_none_aux; eauto.
-      { hexploit nm_wf_pair_pop_cases; eauto. instantiate (1:=tid0). i; des; clarify. }
+      { exploit nm_wf_pair_pop_cases; eauto. instantiate (1:=tid0). i; des; clarify. }
       eauto. all: auto.
   Qed.
 
