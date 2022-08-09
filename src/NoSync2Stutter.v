@@ -1,12 +1,9 @@
 From sflib Require Import sflib.
-From ITree Require Export ITree.
 From Paco Require Import paco.
 
 Require Import Coq.Classes.RelationClasses.
 Require Import Program.
 Require Import Permutation.
-
-Export ITreeNotations.
 
 From Fairness Require Import Axioms.
 From Fairness Require Export ITreeLib FairBeh FairSim NatStructs.
@@ -212,7 +209,7 @@ Section PROOF.
   (*         match goal with *)
   (*         | LSIM0: forall x: X, ?_P x |- _ => instantiate (2:=_P) *)
   (*         end. *)
-          
+
 
   (*     exists X.  *)
 
@@ -374,4 +371,3 @@ Section PROOF.
   (* Qed. *)
 
 End PROOF.
-
