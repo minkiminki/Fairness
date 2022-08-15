@@ -360,6 +360,72 @@ Section PRIMIVIESIM.
     right. auto.
   Qed.
 
+  Variant lsim_monoC
+          (r: forall R_src R_tgt (RR: R_src -> R_tgt -> URA.car -> shared_rel), bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel)
+          R_src R_tgt (RR1: R_src -> R_tgt -> URA.car -> shared_rel)
+    :
+    bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel :=
+    | lsim_monoC_intro
+        (RR0: R_src -> R_tgt -> URA.car -> shared_rel)
+        src tgt shr r_ctx ps pt
+        (MON: forall r_src r_tgt r_ctx shr (RET: RR0 r_src r_tgt r_ctx shr),
+            RR1 r_src r_tgt r_ctx shr)
+        (REL: r _ _ RR0 ps pt r_ctx src tgt shr)
+      :
+      lsim_monoC r RR1 ps pt r_ctx src tgt shr
+  .
+
+  Variant lsim_frameC
+          (r: forall R_src R_tgt (RR: R_src -> R_tgt -> URA.car -> shared_rel), bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel)
+          R_src R_tgt
+          (RR: R_src -> R_tgt -> URA.car -> shared_rel)
+    :
+    bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel :=
+    | lsim_frameC_intro
+        src tgt shr r_ctx ps pt r_frame
+        (REL: r _ _ (fun r_src r_tgt r_ctx shr =>
+                       RR r_src r_tgt (r_frame ⋅ r_ctx) shr)
+                ps pt (r_frame ⋅ r_ctx) src tgt shr)
+      :
+      lsim_frameC r RR ps pt r_ctx src tgt shr
+  .
+
+  Variant lsim_bindC
+          (r: forall R_src R_tgt (RR: R_src -> R_tgt -> URA.car -> shared_rel), bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel)
+          R_src1 R_tgt1
+          (RR: R_src1 -> R_tgt1 -> URA.car -> shared_rel)
+    :
+    bool -> bool -> URA.car -> itree srcE R_src1 -> itree tgtE R_tgt1 -> shared_rel :=
+    | lsim_bindC_intro
+        R_src0 R_tgt0
+        itr_src itr_tgt ktr_src ktr_tgt shr r_ctx ps pt
+        (REL: r _ _ (fun (r_src: R_src0) (r_tgt: R_tgt0) r_ctx shr =>
+                       r _ _ RR false false r_ctx (ktr_src r_src) (ktr_tgt r_tgt) shr)
+                ps pt r_ctx itr_src itr_tgt shr)
+      :
+      lsim_bindC r RR ps pt r_ctx (itr_src >>= ktr_src) (itr_tgt >>= ktr_tgt) shr
+  .
+
+  (* Lemma lsim_monoC_spec tid *)
+  (*   : *)
+  (*   lsim_monoC <10= gupaco9 (fun r => pind9 (__lsim tid r) top9) (cpn9 (fun r => pind9 (__lsim tid r) top9)). *)
+  (* Proof. *)
+  (*   eapply wrespect9_uclo; eauto with paco. *)
+  (*   { eapply lsim_mon. } *)
+  (*   econs. *)
+  (*   { ii. inv IN. econs; eauto. } *)
+  (*   i. inv PR. eapply GF in REL. *)
+  (*   eapply pind9_acc in REL. *)
+  (*   instantiate (1:= (fun R0 R1 (RR: R0 -> R1 -> URA.car -> shared_rel) ps1 pt1 r_ctx src tgt shr => *)
+  (*                       forall *)
+  (*                         (MON: forall r_src r_tgt r_ctx shr (RET: RR0 r_src r_tgt r_ctx shr), *)
+  (*                             RR1 r_src r_tgt r_ctx shr), *)
+  (*                         pind9 (__lsim tid (rclo9 lsim_resetC r)) top9 R0 R1 RR ps0 pt0 r_ctx src tgt shr)) in REL; eauto. *)
+  (*   ss. i. eapply pind9_unfold in PR. *)
+  (*   2:{ eapply _lsim_mon. } *)
+  (*   rename PR into LSIM. inv LSIM. *)
+
+
   Lemma lsim_set_prog
         tid
         R0 R1 (RR: R0 -> R1 -> URA.car -> shared_rel)
