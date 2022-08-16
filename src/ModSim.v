@@ -231,6 +231,24 @@ Section PRIMIVIESIM.
     ii. eapply __lsim_mon; eauto.
   Qed.
 
+  Lemma lsim_indC_spec tid
+    :
+    (fun r => __lsim tid r r) <10= gupaco9 (fun r => pind9 (__lsim tid r) top9) (cpn9 (fun r => pind9 (__lsim tid r) top9)).
+  Proof.
+    eapply wrespect9_uclo; eauto with paco.
+    { eapply lsim_mon. }
+    econs.
+    { ii. eapply __lsim_mon; eauto. eapply _lsim_mon; eauto. }
+    i. eapply pind9_fold.
+    eapply __lsim_mon.
+    { instantiate (1:=l). i. eapply rclo9_base. eauto. }
+    eapply _lsim_mon; eauto. i. split; ss.
+    eapply GF in PR0. eapply pind9_mon_gen; eauto.
+    i. eapply __lsim_mon.
+    { i. eapply rclo9_base. eassumption. }
+    eauto.
+  Qed.
+
   Variant lsim_resetC
           (r: forall R_src R_tgt (RR: R_src -> R_tgt -> URA.car -> shared_rel), bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel)
           R_src R_tgt (RR: R_src -> R_tgt -> URA.car -> shared_rel)
@@ -382,11 +400,12 @@ Section PRIMIVIESIM.
     :
     bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel :=
     | lsim_frameC_intro
-        src tgt shr r_ctx ps pt r_frame
-        (REL: r _ _ (fun r_src r_tgt r_ctx shr =>
-                       forall r_ctx' (EQ: r_ctx = r_frame ⋅ r_ctx'),
-                         RR r_src r_tgt r_ctx' shr)
-                ps pt (r_frame ⋅ r_ctx) src tgt shr)
+        RR1 src tgt shr r_ctx ps pt r_frame
+        (REL: r _ _ RR1 ps pt (r_frame ⋅ r_ctx) src tgt shr)
+        (MON: forall r_src r_tgt r_ctx shr
+                     (SAT: RR1 r_src r_tgt r_ctx shr),
+          forall r_ctx' (EQ: r_ctx = r_frame ⋅ r_ctx'),
+            RR r_src r_tgt r_ctx' shr)
       :
       lsim_frameC r RR ps pt r_ctx src tgt shr
   .
@@ -398,11 +417,12 @@ Section PRIMIVIESIM.
     :
     bool -> bool -> URA.car -> itree srcE R_src1 -> itree tgtE R_tgt1 -> shared_rel :=
     | lsim_bindC_intro
-        R_src0 R_tgt0
+        R_src0 R_tgt0 (RR0: R_src0 -> R_tgt0 -> URA.car -> shared_rel)
         itr_src itr_tgt ktr_src ktr_tgt shr r_ctx ps pt
-        (REL: r _ _ (fun (r_src: R_src0) (r_tgt: R_tgt0) r_ctx shr =>
-                       r _ _ RR false false r_ctx (ktr_src r_src) (ktr_tgt r_tgt) shr)
-                ps pt r_ctx itr_src itr_tgt shr)
+        (REL: r _ _ RR0 ps pt r_ctx itr_src itr_tgt shr)
+        (MON: forall r_src r_tgt r_ctx shr
+                     (SAT: RR0 r_src r_tgt r_ctx shr),
+            r _ _ RR false false r_ctx (ktr_src r_src) (ktr_tgt r_tgt) shr)
       :
       lsim_bindC r RR ps pt r_ctx (itr_src >>= ktr_src) (itr_tgt >>= ktr_tgt) shr
   .
@@ -497,6 +517,9 @@ Section PRIMIVIESIM.
     { eapply pind9_fold. eapply lsim_progress. eapply rclo9_clo_base. econs; eauto. }
   Qed.
 
+  Require Import Program.
+  Require Import Coq.Logic.PropExtensionality.
+
   Lemma lsim_frameC_spec tid
     :
     lsim_frameC <10= gupaco9 (fun r => pind9 (__lsim tid r) top9) (cpn9 (fun r => pind9 (__lsim tid r) top9)).
@@ -508,17 +531,9 @@ Section PRIMIVIESIM.
     i. inv PR. eapply GF in REL.
 
     remember (r_frame ⋅ x5).
-    revert REL.
-    cut (forall (RR: x0 -> x1 -> M -> shared_rel)
-                (MON: forall r_src r_tgt r_ctx shr,
-                    RR r_src r_tgt (r_frame ⋅ r_ctx) shr -> x2 r_src r_tgt r_ctx shr),
-            pind9 (__lsim tid r) top9 x0 x1
-                  RR x3 x4 c x6 x7 x8 ->
-            pind9 (__lsim tid (rclo9 lsim_frameC r)) top9 x0 x1 x2 x3 x4 x5 x6 x7 x8).
-    { i. eapply H; eauto. ss. i. eauto. }
-    i. revert x2 r_frame x5 Heqc MON.
-    pattern x0, x1, RR, x3, x4, c, x6, x7, x8.
-    revert x0 x1 RR x3 x4 c x6 x7 x8 H.
+    revert x2 r_frame x5 Heqc MON.
+    pattern x0, x1, RR1, x3, x4, c, x6, x7, x8.
+    revert x0 x1 RR1 x3 x4 c x6 x7 x8 REL.
     apply pind9_acc. intros rr _ IH x0 x1 RR x3 x4 c x6 x7 x8 PR.
     i. eapply pind9_unfold in PR.
     2:{ eapply _lsim_mon. }
@@ -578,23 +593,143 @@ Section PRIMIVIESIM.
       des. destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
     }
 
-    { eapply pind9_fold. eapply lsim_observe. i. eapply rclo9_clo_base. econs; eauto. }
+    { eapply pind9_fold. eapply lsim_observe. i. eapply rclo9_clo_base.
+      econs; eauto.
+    }
 
     { des. eapply pind9_fold. eapply lsim_yieldL. split; ss.
       destruct LSIM0 as [LSIM IND]. hexploit IH; eauto.
     }
 
-    { eapply pind9_fold. eapply lsim_yieldR; eauto. i.
-      hexploit LSIM0; eauto. clear LSIM0. intros LSIM0.
+    { eapply pind9_fold. eapply lsim_yieldR; eauto.
+      { instantiate (1:=r_own ⋅ r_frame). r_wf VALID. }
+      i. hexploit LSIM0; eauto.
+      { instantiate (1:=r_frame ⋅ r_ctx1). r_wf VALID0. }
+      clear LSIM0. intros LSIM0.
       destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto. i. split; ss; eauto.
     }
 
-    { eapply pind9_fold. eapply lsim_sync; eauto. i.
-      hexploit LSIM0. eapply INV0. eapply VALID0. all: eauto. i; des. esplits; eauto.
-      eapply rclo9_clo_base. econs; eauto.
+    { eapply pind9_fold. eapply lsim_sync; eauto.
+      { instantiate (1:=r_own ⋅ r_frame). r_wf VALID. }
+      i. hexploit LSIM0; eauto.
+      { instantiate (1:=r_frame ⋅ r_ctx1). r_wf VALID0. }
+      i. des. eapply rclo9_clo_base. econs; eauto.
     }
 
-    { eapply pind9_fold. eapply lsim_progress. eapply rclo9_clo_base. econs; eauto. }
+    { eapply pind9_fold. eapply lsim_progress. eapply rclo9_clo_base. econs; eauto.
+    }
+  Qed.
+
+  Lemma lsim_bindC_spec tid
+    :
+    lsim_bindC <10= gupaco9 (fun r => pind9 (__lsim tid r) top9) (cpn9 (fun r => pind9 (__lsim tid r) top9)).
+  Proof.
+    assert (HINT: forall r1, monotone9 (fun r0 => pind9 (__lsim tid r0) r1)).
+    { ii. eapply pind9_mon_gen; eauto. i. eapply __lsim_mon; eauto. }
+    eapply grespect9_uclo; eauto with paco.
+    econs.
+    { ii. inv IN. econs; eauto. }
+    i. inv PR. eapply GF in REL.
+    eapply rclo9_clo_base. eapply cpn9_gupaco.
+    { eauto with paco. }
+
+    revert ktr_src ktr_tgt MON.
+    pattern R_src0, R_tgt0, RR0, x3, x4, x5, itr_src, itr_tgt, x8.
+    revert R_src0 R_tgt0 RR0 x3 x4 x5 itr_src itr_tgt x8 REL.
+    apply pind9_acc. intros rr _ IH R_src0 R_tgt0 RR0 x3 x4 x5 itr_src itr_tgt x8 PR.
+    i. eapply pind9_unfold in PR.
+    2:{ eapply _lsim_mon. }
+    rename PR into LSIM. inv LSIM; ired.
+
+    { eapply lsim_resetC_spec. econs.
+      2:{ instantiate (1:=false). ss. }
+      2:{ instantiate (1:=false). ss. }
+      eapply MON in LSIM0. eapply GF in LSIM0.
+      eapply pind9_mon_gen; eauto. i. ss.
+      eapply __lsim_mon.
+      { i. eapply rclo9_base. eassumption. }
+      eauto.
+    }
+
+    Notation cpn := (cpn9 _).
+    Notation pind := (fun r => pind9 (__lsim _ r) top9).
+    ss.
+
+    { destruct LSIM0 as [LSIM0 IND]. clear LSIM0.
+      guclo lsim_indC_spec. eapply lsim_tauL.
+      hexploit IH; eauto.
+    }
+
+    { des. guclo lsim_indC_spec. eapply lsim_chooseL. esplits; eauto.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_putL.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_getL.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_tidL.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_UB. }
+
+    { des. guclo lsim_indC_spec. eapply lsim_fairL. esplits; eauto.
+      destruct LSIM as [LSIM IND]. hexploit IH; eauto.
+    }
+
+    { destruct LSIM0 as [LSIM0 IND]. clear LSIM0.
+      guclo lsim_indC_spec. eapply lsim_tauR.
+      hexploit IH. eauto. all: eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_chooseR. i. specialize (LSIM0 x).
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_putR.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_getR.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_tidR.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_fairR. i. specialize (LSIM0 _ FAIR).
+      des. destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+    }
+
+    { gfinal. left. eapply pind9_fold. eapply lsim_observe. i.
+      eapply rclo9_clo_base. left. econs; eauto.
+    }
+
+    { des. guclo lsim_indC_spec. eapply lsim_yieldL.
+      destruct LSIM0 as [LSIM IND]. hexploit IH; eauto.
+      rewrite ! bind_bind. eauto.
+    }
+
+    { guclo lsim_indC_spec. eapply lsim_yieldR; eauto.
+      i. hexploit LSIM0; eauto.
+      clear LSIM0. intros LSIM0.
+      destruct LSIM0 as [LSIM0 IND]. hexploit IH; eauto.
+      rewrite ! bind_bind. eauto.
+    }
+
+    { gfinal. left. eapply pind9_fold. eapply lsim_sync; eauto.
+      i. hexploit LSIM0; eauto.
+      i. des. eapply rclo9_clo_base. left. econs; eauto.
+    }
+
+    { gfinal. left. eapply pind9_fold. eapply lsim_progress. eapply rclo9_clo_base. left. econs; eauto.
+    }
   Qed.
 
   Lemma lsim_set_prog
