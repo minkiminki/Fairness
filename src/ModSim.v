@@ -867,6 +867,37 @@ Section PRIMIVIESIM.
 
   Qed.
 
+  Variant lsim_bindRC'
+          (r: forall R_src R_tgt (RR: R_src -> R_tgt -> URA.car -> shared_rel), bool -> bool -> URA.car -> itree srcE R_src -> itree tgtE R_tgt -> shared_rel)
+          R_src1 R_tgt1
+          (RR: R_src1 -> R_tgt1 -> URA.car -> shared_rel)
+    :
+    bool -> bool -> URA.car -> itree srcE R_src1 -> itree tgtE R_tgt1 -> shared_rel :=
+    | lsim_bindRC'_intro
+        R_tgt0 (RR0: R_tgt0 -> URA.car -> shared_rel)
+        itr_tgt ktr_src ktr_tgt shr r_ctx ps pt
+        (REL: r _ _ (fun _ => RR0) ps pt r_ctx (trigger Yield) itr_tgt shr)
+        (MON: forall r_tgt r_ctx shr
+                     (SAT: RR0 r_tgt r_ctx shr),
+            r _ _ RR false false r_ctx (trigger Yield >>= ktr_src) (ktr_tgt r_tgt) shr)
+      :
+      lsim_bindRC' r RR ps pt r_ctx (trigger Yield >>= ktr_src) (itr_tgt >>= ktr_tgt) shr
+  .
+
+  Lemma lsim_bindRC'_spec tid
+    :
+    lsim_bindRC' <10= gupaco9 (fun r => pind9 (__lsim tid r) top9) (cpn9 (fun r => pind9 (__lsim tid r) top9)).
+  Proof.
+    assert (HINT: forall r1, monotone9 (fun r0 => pind9 (__lsim tid r0) r1)).
+    { ii. eapply pind9_mon_gen; eauto. i. eapply __lsim_mon; eauto. }
+    eapply grespect9_uclo; eauto with paco.
+    econs.
+    { ii. inv IN. econs; eauto. }
+    i. inv PR. eapply GF in REL.
+    eapply rclo9_clo_base. eapply cpn9_gupaco.
+    { eauto with paco. }
+  Abort.
+
   Definition local_RR {R0 R1} (RR: R0 -> R1 -> Prop) tid:
     R0 -> R1 -> URA.car -> shared_rel :=
     fun (r_src: R0) (r_tgt: R1) (r_ctx: URA.car) '(ths2, im_src1, im_tgt1, st_src1, st_tgt1) =>
