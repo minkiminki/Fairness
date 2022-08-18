@@ -6,6 +6,7 @@ Require Import Coq.Classes.RelationClasses.
 From Fairness Require Export ITreeLib FairBeh Mod.
 From Fairness Require Import pind.
 From Fairness Require Import PCM.
+From Fairness Require Import PindTac.
 
 Set Implicit Arguments.
 
@@ -233,6 +234,40 @@ Section PRIMIVIESIM.
   Hint Resolve lsim_mon: paco.
   Hint Resolve cpn9_wcompat: paco.
 
+  From Paco Require Import pacotac_internal.
+
+  Lemma lsim_acc_gen
+        tid r
+        (A: Type)
+        (f0: forall (a: A), Type)
+        (f1: forall (a: A), Type)
+        (f2: forall (a: A), f0 a -> f1 a -> URA.car -> shared_rel)
+        (f3: forall (a: A), bool)
+        (f4: forall (a: A), bool)
+        (f5: forall (a: A), URA.car)
+        (f6: forall (a: A), itree srcE (f0 a))
+        (f7: forall (a: A), itree tgtE (f1 a))
+        (f8: forall (a: A), shared)
+        r0 (q: A -> Prop)
+        (IND: forall r1
+                     (LE: r1 <9= r0)
+                     (IH: forall a, @r1 (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a) -> q a),
+          forall a, pind9 (__lsim tid r) r1 (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a) -> q a)
+    :
+    forall a, pind9 (__lsim tid r) r0 (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a) -> q a.
+  Proof.
+    cut ((pind9 (__lsim tid r) r0) <9= curry9 (fun x => forall a (EQ: @exist9T _ _ _ _ _ _ _ _ _ (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a) = x), q a)).
+    { exact (fun P a H => uncurry_adjoint2_9 P (@exist9T _ _ _ _ _ _ _ _ _ (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a)) H a eq_refl). }
+    { exact (@pind9_acc _ _ _ _ _ _ _ _ _ (__lsim tid r) (curry9 (fun x => forall a (EQ: @exist9T _ _ _ _ _ _ _ _ _ (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a) = x), q a)) r0 (fun rr LE IH => @uncurry_adjoint1_9 _ _ _ _ _ _ _ _ _ (pind9 (__lsim tid r) rr) (fun x => forall a (EQ: @exist9T _ _ _ _ _ _ _ _ _ (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a) = x), q a) (fun x PR a EQ => IND rr LE (fun a H => IH (f0 a) (f1 a) (f2 a) (f3 a) (f4 a) (f5 a) (f6 a) (f7 a) (f8 a) H a eq_refl) a (@eq_rect _ _ (uncurry9 (pind9 (__lsim tid r) rr)) PR _ (eq_sym EQ))))).
+    }
+  Qed.
+
+  Ltac pind_gen := patterning 9; refine (@lsim_acc_gen
+                                           _ _ _
+                                           _ _ _ _ _ _ _ _ _
+                                           _ _ _).
+  Ltac pinduction n := currying n pind_gen.
+
   (* TODO: add this in pico lib *)
   Lemma lsim_indC_spec tid
     :
@@ -274,13 +309,10 @@ Section PRIMIVIESIM.
     econs.
     { ii. inv IN. econs; eauto. }
     i. inv PR. eapply GF in REL.
-    eapply pind9_acc in REL.
-    instantiate (1:= (fun R0 R1 (RR: R0 -> R1 -> URA.car -> shared_rel) ps1 pt1 r_ctx src tgt shr =>
-                        forall ps0 pt0,
-                          (ps1 = true -> ps0 = true) ->
-                          (pt1 = true -> pt0 = true) ->
-                          pind9 (__lsim tid (rclo9 lsim_resetC r)) top9 R0 R1 RR ps0 pt0 r_ctx src tgt shr)) in REL; eauto.
-    ss. i. eapply pind9_unfold in PR.
+
+    revert x0 x1 x2 ps1 pt1 x5 x6 x7 x8 REL x3 x4 SRC TGT.
+    pinduction 9. i.
+    eapply pind9_unfold in PR.
     2:{ eapply _lsim_mon. }
     rename PR into LSIM. inv LSIM.
 
@@ -354,7 +386,7 @@ Section PRIMIVIESIM.
       eapply rclo9_base. auto.
     }
 
-    { pclearbot. hexploit H; ss; i. hexploit H0; ss; i. clarify.
+    { pclearbot. hexploit SRC; ss; i. hexploit TGT; ss; i. clarify.
       eapply pind9_fold. eapply lsim_progress. eapply rclo9_base. auto. }
   Qed.
 
@@ -896,6 +928,43 @@ Section PRIMIVIESIM.
     i. inv PR. eapply GF in REL.
     eapply rclo9_clo_base. eapply cpn9_gupaco.
     { eauto with paco. }
+    revert x0 x1 x2 ktr_src ktr_tgt MON.
+    revert x3 x4 x5 x8 R_tgt0 RR0 itr_tgt REL.
+    pinduction 7. i.
+
+    eapply pind9_unfold in PR.
+    2:{ eapply _lsim_mon. }
+    rename PR into LSIM. inv LSIM; ired.
+
+    { eapply lsim_resetC_spec. econs.
+      2:{ instantiate (1:=false). ss. }
+      2:{ instantiate (1:=false). ss. }
+      eapply MON in LSIM0. eapply GF in LSIM0.
+      eapply pind9_mon_gen; eauto. i. ss.
+      eapply __lsim_mon.
+      { i. eapply rclo9_base. eassumption. }
+      eauto.
+    }
+
+    Notation cpn := (cpn9 _).
+    Notation pind := (fun r => pind9 (__lsim _ r) top9).
+    ss.
+
+    { destruct LSIM0 as [LSIM0 IND]. clear LSIM0.
+      guclo lsim_indC_spec. eapply lsim_tauL.
+      hexploit IH; eauto.
+    }
+
+
+
+    reert R
+
+
+    match goal with
+    | |- ?G => idtac
+
+
+
   Abort.
 
   Definition local_RR {R0 R1} (RR: R0 -> R1 -> Prop) tid:
