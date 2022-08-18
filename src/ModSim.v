@@ -916,6 +916,12 @@ Section PRIMIVIESIM.
       lsim_bindRC' r RR ps pt r_ctx (trigger Yield >>= ktr_src) (itr_tgt >>= ktr_tgt) shr
   .
 
+  Lemma trigger_yield
+    :
+    trigger Yield = trigger Yield;;; Ret tt.
+  Proof.
+  Admitted.
+
   Lemma lsim_bindRC'_spec tid
     :
     lsim_bindRC' <10= gupaco9 (fun r => pind9 (__lsim tid r) top9) (cpn9 (fun r => pind9 (__lsim tid r) top9)).
@@ -936,36 +942,60 @@ Section PRIMIVIESIM.
     2:{ eapply _lsim_mon. }
     rename PR into LSIM. inv LSIM; ired.
 
-    { eapply lsim_resetC_spec. econs.
-      2:{ instantiate (1:=false). ss. }
-      2:{ instantiate (1:=false). ss. }
-      eapply MON in LSIM0. eapply GF in LSIM0.
-      eapply pind9_mon_gen; eauto. i. ss.
-      eapply __lsim_mon.
-      { i. eapply rclo9_base. eassumption. }
-      eauto.
-    }
-
-    Notation cpn := (cpn9 _).
-    Notation pind := (fun r => pind9 (__lsim _ r) top9).
-    ss.
-
-    { destruct LSIM0 as [LSIM0 IND]. clear LSIM0.
-      guclo lsim_indC_spec. eapply lsim_tauL.
+    { eapply f_equal with (f := observe) in H3. ss. }
+    { eapply f_equal with (f := observe) in H3. ss. }
+    { eapply f_equal with (f := observe) in H3. ss. }
+    { eapply f_equal with (f := observe) in H3. ss. }
+    { eapply f_equal with (f := observe) in H3. ss. }
+    { eapply f_equal with (f := observe) in H3. ss. }
+    { destruct LSIM0 as [LSIM0 IND].
+      guclo lsim_indC_spec. eapply lsim_tauR.
       hexploit IH; eauto.
     }
-
-
-
-    reert R
-
-
-    match goal with
-    | |- ?G => idtac
-
-
-
-  Abort.
+    { guclo lsim_indC_spec. eapply lsim_chooseR.
+      intros x. specialize (LSIM0 x). destruct LSIM0 as [LSIM0 IND].
+      hexploit IH; eauto.
+    }
+    { destruct LSIM0 as [LSIM0 IND].
+      guclo lsim_indC_spec. eapply lsim_putR.
+      hexploit IH; eauto.
+    }
+    { destruct LSIM0 as [LSIM0 IND].
+      guclo lsim_indC_spec. eapply lsim_getR.
+      hexploit IH; eauto.
+    }
+    { destruct LSIM0 as [LSIM0 IND].
+      guclo lsim_indC_spec. eapply lsim_tidR.
+      hexploit IH; eauto.
+    }
+    { guclo lsim_indC_spec. eapply lsim_fairR.
+      i. hexploit LSIM0; eauto. i. des. destruct H as [LSIM IND].
+      splits. hexploit IH; eauto.
+    }
+    { eapply f_equal with (f := observe) in H3. ss. }
+    { ss. destruct LSIM0 as [LSIM0 IND].
+      assert (ktr_src0 = fun _ => Ret tt).
+      { admit. }
+      subst. ired.
+      admit.
+    }
+    { guclo lsim_indC_spec. eapply lsim_yieldR; eauto.
+      assert (ktr_src0 = fun _ => Ret tt).
+      { admit. }
+      subst. revert LSIM0. ired. intros LSIM0.
+      i. hexploit LSIM0; eauto. i.
+      destruct H as [LSIM IND].
+      hexploit IH; eauto.
+      { match goal with
+        | |- ?f ?i ?x ?y =>
+            cut (f (trigger Yield;;; Ret tt) x y)
+        end.
+        { admit. }
+        eauto.
+      }
+      i. admit.
+    }
+  Admitted.
 
   Definition local_RR {R0 R1} (RR: R0 -> R1 -> Prop) tid:
     R0 -> R1 -> URA.car -> shared_rel :=
