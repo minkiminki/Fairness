@@ -916,11 +916,37 @@ Section PRIMIVIESIM.
       lsim_bindRC' r RR ps pt r_ctx (trigger Yield >>= ktr_src) (itr_tgt >>= ktr_tgt) shr
   .
 
-  Lemma trigger_yield
+  Require Import Program.
+
+  Lemma trigger_yield E `{cE -< E}
     :
-    trigger Yield = trigger Yield;;; Ret tt.
+    (trigger Yield;;; Ret tt: itree E unit) = trigger Yield.
   Proof.
-  Admitted.
+    eapply observe_eta. ss.
+    rewrite bind_trigger. ss.
+    f_equal. extensionality x. destruct x. ss.
+  Qed.
+
+  Lemma trigger_yield_rev E `{cE -< E}
+        ktr
+        (EQ: (trigger Yield >>= ktr: itree E unit) = trigger Yield)
+    :
+    ktr = fun _ => Ret tt.
+  Proof.
+    eapply f_equal with (f:=observe) in EQ.
+    ss. rewrite bind_trigger in EQ. ss.
+    dependent destruction EQ.
+    extensionality u. destruct u.
+    eapply equal_f in x. eauto.
+  Qed.
+
+  Lemma trigger_unit_same (E: Type -> Type) (e: E unit) R
+        (ktr: unit -> itree E R)
+    :
+    trigger e >>= (fun x => ktr x) = trigger e >>= (fun x => ktr tt).
+  Proof.
+    f_equal. extensionality u. destruct u. auto.
+  Qed.
 
   Lemma lsim_bindRC'_spec tid
     :
@@ -974,26 +1000,29 @@ Section PRIMIVIESIM.
     }
     { eapply f_equal with (f := observe) in H3. ss. }
     { ss. destruct LSIM0 as [LSIM0 IND].
-      assert (ktr_src0 = fun _ => Ret tt).
-      { admit. }
-      subst. ired.
+      eapply trigger_yield_rev in H3. subst.
+      ired.
       admit.
     }
-    { guclo lsim_indC_spec. eapply lsim_yieldR; eauto.
-      assert (ktr_src0 = fun _ => Ret tt).
-      { admit. }
+    { eapply trigger_yield_rev in H3.
       subst. revert LSIM0. ired. intros LSIM0.
+
+      guclo lsim_indC_spec.
+      eapply lsim_yieldR; eauto.
       i. hexploit LSIM0; eauto. i.
       destruct H as [LSIM IND].
+
+      gbase.
+
+      gstep.
+
+      gbase.
       hexploit IH; eauto.
-      { match goal with
-        | |- ?f ?i ?x ?y =>
-            cut (f (trigger Yield;;; Ret tt) x y)
-        end.
-        { admit. }
-        eauto.
-      }
-      i. admit.
+      { rewrite <- trigger_yield. eauto. }
+      i. replace (trigger Yield;;; ktr_src tt) with (x <- trigger Yield;; ktr_src x); auto.
+      eapply trigger_unit_same.
+    }
+    2:{ gfinal. left. eapply pind9_fold. eapply lsim_progress. eapply rclo9_clo_base. left. econs; eauto.
     }
   Admitted.
 
