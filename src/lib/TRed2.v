@@ -19,14 +19,17 @@ Arguments red_lemma [_ _ _] _.
 Arguments red_focused [_ _ _] _.
 Arguments red_next [_ _ _] _.
 
-Class red_db_incl (c0 c1: red_class) :=
-  mk_red_db_incl { }.
-Arguments mk_red_db_incl {_ _}.
+Class red_db_incl (c0: red_class) :=
+  mk_red_db_incl { red_db_incl_next: red_class; }.
 
-#[export] Instance red_db_incl_focus c0 c1 `{red_db_incl c0 c1}
- A (a: A)
-  : red_db c1 a :=
-  mk_red_db _ _ (@id) a (inr c0).
+(* Class red_db_incl (c0 c1: red_class) := *)
+(*   mk_red_db_incl { }. *)
+(* Arguments mk_red_db_incl {_ _}. *)
+
+(* #[export] Instance red_db_incl_focus c0 c1 `{red_db_incl c0 c1} *)
+(*  A (a: A) *)
+(*   : red_db c1 a := *)
+(*   mk_red_db _ _ (@id) a (inr c0). *)
 
 From Ltac2 Require Import Ltac2.
 From Ltac2 Require Option Array Ident Control Std Fresh Message.
@@ -68,32 +71,59 @@ Set Default Proof Mode "Classic".
 Ltac _red_tac c f term k :=
   message 44;
   message c;
+  message term;
   message 55;
+  try(
   match c with
   | inr ?c =>
-      tcsearch
-        (@red_db c _ term)
-        ltac:(fun tc =>
-                let lem := (eval red in (red_lemma tc)) in
-                let lem := (eval red in lem) in
-                let focused := (eval red in (red_focused tc)) in
-                let focused := (eval red in focused) in
-                let next := (eval red in (red_next tc)) in
-                let next := (eval red in next) in
-                (* message next; *)
-                (* message focused; *)
-                (* instantiate (f:=_break); *)
-                (* ltac:(k; apply lem)) *)
-                _red_tac next f focused ltac:(k; eapply lem))
+      first[
+
+          message term;
+          message (@red_db c _ term);
+          tcsearch
+              (@red_db c _ term)
+              ltac:(fun tc =>
+                      message tc;
+                      let lem := (eval red in (red_lemma tc)) in
+                      let lem := (eval red in lem) in
+                      let focused := (eval red in (red_focused tc)) in
+                      let focused := (eval red in focused) in
+                      let next := (eval red in (red_next tc)) in
+                      let next := (eval red in next) in
+                      message next;
+                      message focused;
+                      (* instantiate (f:=_break); *)
+                      (* ltac:(k; apply lem)) *)
+                      _red_tac next f focused ltac:(k; eapply lem))
+        |
+          message term;
+          message (@red_db_incl c);
+          tcsearch
+            (@red_db_incl c)
+            ltac:(fun tc =>
+                    message tc;
+                    let n := eval compute in tc in
+                      message n;
+                    let n := constr:(@red_db_incl_next _ tc) in
+                    message n;
+                    let next := (eval red in (@red_db_incl_next _ tc)) in
+                    message next;
+                    let next := (eval red in next) in
+                    message next;
+                    _red_tac next f term k)
+        ]
   | inl ?fl =>
-      instantiate (f:=fl); k
-  end.
+      (* instantiate (f:=fl); *)
+      k
+  end).
 
 Ltac red_tac c f :=
+  try(
   match goal with
   | [ |- ?term = _ ] =>
+      instantiate (f:=_break);
       (_red_tac constr:(inr c: (_flag + red_class)%type) f term ltac:(idtac))
-  end
+  end)
 .
 
 Module TUTORIAL.
@@ -136,7 +166,9 @@ Module TUTORIAL.
     Instance foo_red5_hint: red_db cl_C p :=
       mk_red_db _ _ foo_red5 q (inl _break).
 
-    Instance cl_B_unfold_cl_B: red_db_incl cl_B_unfold cl_B := mk_red_db_incl.
+    Instance cl_B_unfold_cl_B: red_db_incl cl_B := mk_red_db_incl _ cl_B_unfold.
+
+    (* Instance cl_B_unfold_cl_B: red_db_incl cl_B_unfold cl_B := mk_red_db_incl. *)
 
     Instance foo_red_f_hint a: red_db cl_B (f a) :=
       mk_red_db _ _ (@f_equal _ _ f) a (inr cl_B).
@@ -147,7 +179,9 @@ Module TUTORIAL.
       intros n H.
       (prw ltac:(red_tac cl_A) 3 0).
       (prw ltac:(red_tac cl_C) 2 1 0).
-      (prw ltac:(red_tac cl_B) 2 2 1 1 0).
+      (prw ltac:(red_tac cl_B) 2 2 1 0).
+
+      fail.
       exact H.
     Qed.
 
