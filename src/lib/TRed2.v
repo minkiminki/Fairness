@@ -21,6 +21,7 @@ Arguments red_next [_ _ _] _.
 
 Class red_db_incl (c0: red_class) :=
   mk_red_db_incl { red_db_incl_next: red_class; }.
+Arguments red_db_incl_next [_] _.
 
 (* Class red_db_incl (c0 c1: red_class) := *)
 (*   mk_red_db_incl { }. *)
@@ -69,59 +70,36 @@ Ltac tcsearch :=
 Set Default Proof Mode "Classic".
 
 Ltac _red_tac c f term k :=
-  message 44;
-  message c;
-  message term;
-  message 55;
-  try(
   match c with
   | inr ?c =>
       first[
-
-          message term;
-          message (@red_db c _ term);
           tcsearch
-              (@red_db c _ term)
-              ltac:(fun tc =>
-                      message tc;
-                      let lem := (eval red in (red_lemma tc)) in
-                      let lem := (eval red in lem) in
-                      let focused := (eval red in (red_focused tc)) in
-                      let focused := (eval red in focused) in
-                      let next := (eval red in (red_next tc)) in
-                      let next := (eval red in next) in
-                      message next;
-                      message focused;
-                      (* instantiate (f:=_break); *)
-                      (* ltac:(k; apply lem)) *)
-                      _red_tac next f focused ltac:(k; eapply lem))
+            (@red_db c _ term)
+            ltac:(fun tc =>
+                    let lem := (eval red in (red_lemma tc)) in
+                    let lem := (eval red in lem) in
+                    let focused := (eval red in (red_focused tc)) in
+                    let focused := (eval red in focused) in
+                    let next := (eval red in (red_next tc)) in
+                    let next := (eval red in next) in
+                    _red_tac next f focused ltac:(k; eapply lem))
         |
-          message term;
-          message (@red_db_incl c);
           tcsearch
             (@red_db_incl c)
             ltac:(fun tc =>
-                    message tc;
-                    let n := eval compute in tc in
-                      message n;
-                    let n := constr:(@red_db_incl_next _ tc) in
-                    message n;
                     let next := (eval red in (@red_db_incl_next _ tc)) in
-                    message next;
                     let next := (eval red in next) in
-                    message next;
-                    _red_tac next f term k)
+                    _red_tac (inr next: (_flag + red_class)%type) f term k)
         ]
   | inl ?fl =>
-      (* instantiate (f:=fl); *)
+      instantiate (f:=fl);
       k
-  end).
+  end.
 
 Ltac red_tac c f :=
   try(
   match goal with
   | [ |- ?term = _ ] =>
-      instantiate (f:=_break);
       (_red_tac constr:(inr c: (_flag + red_class)%type) f term ltac:(idtac))
   end)
 .
@@ -176,13 +154,13 @@ Module TUTORIAL.
     Goal forall (n: nat) (H: sim c ((n, f z), q) n),
         sim a ((n, f x), p) n.
     Proof.
+      Set Ltac Profiling.
       intros n H.
       (prw ltac:(red_tac cl_A) 3 0).
       (prw ltac:(red_tac cl_C) 2 1 0).
       (prw ltac:(red_tac cl_B) 2 2 1 0).
-
-      fail.
       exact H.
+      Show Ltac Profile.
     Qed.
 
   End FOO.
