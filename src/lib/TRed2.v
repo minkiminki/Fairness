@@ -33,7 +33,7 @@ Arguments red_db_incl_next [_] _.
 (*   mk_red_db _ _ (@id) a (inr c0). *)
 
 From Ltac2 Require Import Ltac2.
-From Ltac2 Require Option Array Ident Control Std Fresh Message.
+From Ltac2 Require Option Array Ident Control Std Fresh Message Constr.
 
 Ltac2 or t0 t1 :=
   match! 'True with
@@ -49,16 +49,63 @@ Ltac message :=
            Message.print (Message.of_constr e))
 .
 
-Ltac2 tcsearch e :=
-  let x := Array.make 1 constr:(tt: unit) in
-  or (fun _ =>
-        let n := Fresh.in_goal ident:(_TC_) in
-        ltac1:(e n|- unshelve evar (n: e);
-               [typeclasses eauto|]) (Ltac1.of_constr e) (Ltac1.of_ident n);
-        Array.set x 0 (Std.eval_unfold [(Std.VarRef n, Std.AllOccurrences)] (Control.hyp n));
-        fail ())
-     (fun _ => Array.get x 0)
+Ltac2 Type exn ::= [ TCSearchSuccess (constr) | TCSearchFail ].
+
+
+Ltac2 evar t n :=
+  let u := open_constr:(_: ltac:(exact_no_check $t)) in
+  match Constr.Unsafe.kind u with
+  | Constr.Unsafe.Cast v _ _ =>
+      Std.pose n t;
+      v
+  | _ => Control.throw Init.Assertion_failure
+  end
 .
+
+Ltac2 unshelve_evar e n :=
+  let v := evar e (Some n) in
+  match Constr.Unsafe.kind v with
+  | Constr.Unsafe.Evar e _ =>
+      Control.new_goal e
+  | _ => Control.throw Init.Assertion_failure
+  end
+.
+
+Ltac2 unshelve_evar1 e n :=
+  (ltac1:(e n|- unshelve evar (n: e))) (Ltac1.of_constr e) (Ltac1.of_ident n)
+.
+
+Ltac2 tcsearch e :=
+  Control.plus
+    (fun _ =>
+       let n := Fresh.in_goal ident:(_TC_) in
+       unshelve_evar e n > [|typeclasses_eauto];
+       Message.print (Message.of_string "xxx");
+       Message.print (Message.of_constr (Std.eval_unfold [(Std.VarRef n, Std.AllOccurrences)] (Control.hyp n)));
+       Message.print (Message.of_string "yyy");
+       Control.zero (TCSearchSuccess (Std.eval_unfold [(Std.VarRef n, Std.AllOccurrences)] (Control.hyp n)))
+    )
+    (fun e =>
+       Message.print (Message.of_string "dddd");
+       Message.print (Message.of_exn e);
+       Message.print (Message.of_string "nmnn");
+       match e with
+       | TCSearchSuccess c =>
+           Message.print (Message.of_string "aaaa");
+           Message.print (Message.of_constr c);
+           c
+       | _ => Control.zero e
+       end
+    )
+.
+
+Class Foo (n: nat) := mk_Foo {}.
+Global Instance foo: Foo 3 := mk_Foo _.
+
+From Ltac2 Require Option Array Ident Control Std Fresh Message Constr.
+
+From Ltac2 Require Import Ltac2 Constr.
+Import Constr.Unsafe.
 
 Ltac tcsearch :=
   ltac2:(e k |-
@@ -67,9 +114,11 @@ Ltac tcsearch :=
            Ltac1.apply k [Ltac1.of_constr v] Ltac1.run)
 .
 
+
 Set Default Proof Mode "Classic".
 
 Ltac _red_tac c f term k :=
+try(
   match c with
   | inr ?c =>
       first[
@@ -94,7 +143,7 @@ Ltac _red_tac c f term k :=
   | inl ?fl =>
       instantiate (f:=fl);
       k
-  end.
+  end).
 
 Ltac red_tac c f :=
   try(
@@ -154,9 +203,16 @@ Module TUTORIAL.
     Goal forall (n: nat) (H: sim c ((n, f z), q) n),
         sim a ((n, f x), p) n.
     Proof.
+
+
+
       Set Ltac Profiling.
       intros n H.
-      (prw ltac:(red_tac cl_A) 3 0).
+      try (prw ltac:(red_tac cl_A) 3 0).
+      Show Proof.
+
+      ltac2:(open_constr:(_ : ltac:(exact_no_check $type))).
+
       (prw ltac:(red_tac cl_C) 2 1 0).
       (prw ltac:(red_tac cl_B) 2 2 1 0).
       exact H.

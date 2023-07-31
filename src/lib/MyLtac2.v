@@ -40,19 +40,11 @@ Ltac2 tcsearch e :=
     (fun _ =>
        let n := Fresh.in_goal ident:(_TC_) in
        unshelve_evar e n > [|typeclasses_eauto];
-       Message.print (Message.of_string "xxx");
-       Message.print (Message.of_constr (Std.eval_unfold [(Std.VarRef n, Std.AllOccurrences)] (Control.hyp n)));
-       Message.print (Message.of_string "yyy");
        Control.zero (TCSearchSuccess (Std.eval_unfold [(Std.VarRef n, Std.AllOccurrences)] (Control.hyp n)))
     )
     (fun e =>
-       Message.print (Message.of_string "dddd");
-       Message.print (Message.of_exn e);
-       Message.print (Message.of_string "nmnn");
        match e with
        | TCSearchSuccess c =>
-           Message.print (Message.of_string "aaaa");
-           Message.print (Message.of_constr c);
            c
        | _ => Control.zero e
        end
